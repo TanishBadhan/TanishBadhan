@@ -1,0 +1,47 @@
+name: Profile README Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-readme:
+    name: Validate README structure and links
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Check README and Markdown links
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          path = Path("README.md")
+          if not path.is_file():
+              sys.exit("README.md is missing.")
+
+          text = path.read_text(encoding="utf-8")
+          if not text.strip():
+              sys.exit("README.md is empty.")
+
+          links = re.findall(r'\[[^\]]*\]\(([^)]+)\)', text)
+          invalid = [
+              target for target in links
+              if not (target.startswith("https://") or target.startswith("mailto:"))
+          ]
+          if invalid:
+              sys.exit("Links must use https:// or mailto: URLs: " + ", ".join(invalid))
+
+          print(f"README exists and is non-empty. Checked {len(links)} Markdown links.")
+          print("Note: this checks link format, not whether remote websites are reachable.")
+          PY
